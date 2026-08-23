@@ -20,14 +20,19 @@ class AIFreelanceEscrow(gl.Contract):
         if self.is_completed:
             return "Error: Contract already completed"
 
-        prompt = f"Task requirement: {self.job_description}. Submitted work: {submitted_work}. Does it fulfill the task? Answer APPROVED or REJECTED."
-        
-        # Eksekusi prompt langsung di scope fungsi write
-        evaluation = gl.nondet.exec_prompt(prompt)
+        task_desc = self.job_description
+
+        # Fungsi evaluasi wajib dibungkus di dalam kelas konsensus GenLayer
+        def evaluate_submission() -> str:
+            prompt = f"Task: {task_desc}. Submission: {submitted_work}. Is this acceptable? Answer APPROVED or REJECTED."
+            return gl.nondet.exec_prompt(prompt)
+
+        evaluation = gl.eq_principle.ComparativeEq(evaluate_submission)
 
         if "APPROVED" in str(evaluation).upper():
             self.is_completed = True
             return "APPROVED: Work accepted."
         else:
             return f"REJECTED: {evaluation}"
+
 
