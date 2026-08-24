@@ -15,7 +15,7 @@ class AIFreelanceEscrow(gl.Contract):
         self.amount = u256(0)
         self.status = "CREATED"
 
-    @gl.public.write
+    @gl.public.write.payable
     def fund_escrow(self):
         """Client mendepositkan dana ke dalam escrow."""
         assert gl.message.sender_address == self.client, "Only client can fund"
@@ -25,30 +25,26 @@ class AIFreelanceEscrow(gl.Contract):
         self.amount = gl.message.value
         self.status = "FUNDED"
 
-    @gl.public.view
-    def _evaluate_work_nondet(self, submitted_work: str) -> bool:
-        """Helper non-deterministic call untuk evaluasi AI."""
+    @gl.public.write
+    def submit_work_and_claim(self, submitted_work: str) -> str:
+        """Freelancer mengirim hasil kerja dan memicu konsensus AI."""
+        assert gl.message.sender_address == self.freelancer, "Only freelancer can submit"
+        assert self.status == "FUNDED", "Escrow is not funded"
+
         prompt = (
             f"Task Description: {self.job_description}\n"
             f"Submitted Work: {submitted_work}\n"
             "Analyze if the submitted work fully satisfies the task requirements. "
             "Respond ONLY with 'APPROVED' or 'REJECTED'."
         )
-        response = gl.nondet.exec_prompt(prompt)
-        return "APPROVED" in response.upper()
 
-    @gl.public.write
-    def submit_work_and_claim(self, submitted_work: str) -> str:
-        """Freelancer mengirim hasil kerja dan memicu verifikasi konsensus AI."""
-        assert gl.message.sender_address == self.freelancer, "Only freelancer can submit"
-        assert self.status == "FUNDED", "Escrow is not funded"
-
-        # Pemanggilan Equivalence Principle yang valid untuk GenVM
-        is_acceptable = gl.eq_principle.eq_or_reject(
-            lambda: self._evaluate_work_nondet(submitted_work)
+        # Menggunakan Equivalence Principle bawaan SDK untuk eksekusi LLM konsensus
+        result = gl.eq_principle.prompt_comparative(
+            prompt,
+            criteria="The output must clearly state whether the submission is APPROVED or REJECTED."
         )
 
-        if is_acceptable:
+        if "APPROVED" in result.upper():
             self.status = "COMPLETED"
             payout_amount = self.amount
             self.amount = u256(0)
@@ -62,7 +58,7 @@ class AIFreelanceEscrow(gl.Contract):
 
     @gl.public.write
     def resolve_dispute_refund(self):
-        """Client dapat melakukan refund jika status pekerjaan ditolak/disputed."""
+        """Client melakukan refund jika status pekerjaan ditolak/disputed."""
         assert gl.message.sender_address == self.client, "Only client can trigger refund"
         assert self.status == "DISPUTED", "No dispute to refund"
 
@@ -72,4 +68,3 @@ class AIFreelanceEscrow(gl.Contract):
 
         # Kembalikan dana ke client
         gl.transfer(self.client, refund_amount)
-
