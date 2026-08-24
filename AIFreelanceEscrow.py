@@ -7,9 +7,9 @@ class AIFreelanceEscrow(gl.Contract):
     job_description: str
     is_completed: bool
 
-    def __init__(self, freelancer: Address, job_description: str):
+    def __init__(self, freelancer: str, job_description: str):
         self.client = gl.message.sender_address
-        self.freelancer = freelancer
+        self.freelancer = Address(freelancer)
         self.job_description = job_description
         self.is_completed = False
 
@@ -22,7 +22,6 @@ class AIFreelanceEscrow(gl.Contract):
 
         task_desc = self.job_description
 
-        # Fungsi evaluasi wajib dibungkus di dalam kelas konsensus GenLayer
         def evaluate_submission() -> str:
             prompt = f"Task: {task_desc}. Submission: {submitted_work}. Is this acceptable? Answer APPROVED or REJECTED."
             return gl.nondet.exec_prompt(prompt)
@@ -34,5 +33,4 @@ class AIFreelanceEscrow(gl.Contract):
             return "APPROVED: Work accepted."
         else:
             return f"REJECTED: {evaluation}"
-
 
