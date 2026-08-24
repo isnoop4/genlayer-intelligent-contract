@@ -38,13 +38,10 @@ class AIFreelanceEscrow(gl.Contract):
             "Respond ONLY with 'APPROVED' or 'REJECTED'."
         )
 
-        # Menggunakan Equivalence Principle bawaan SDK untuk eksekusi LLM konsensus
-        result = gl.eq_principle.prompt_comparative(
-            prompt,
-            criteria="The output must clearly state whether the submission is APPROVED or REJECTED."
-        )
+        # Menggunakan prompt_comparative hanya dengan argumen prompt
+        result = gl.eq_principle.prompt_comparative(prompt)
 
-        if "APPROVED" in result.upper():
+        if "APPROVED" in str(result).upper():
             self.status = "COMPLETED"
             payout_amount = self.amount
             self.amount = u256(0)
