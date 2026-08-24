@@ -31,24 +31,19 @@ class AIFreelanceEscrow(gl.Contract):
         assert gl.message.sender_address == self.freelancer, "Only freelancer can submit"
         assert self.status == "FUNDED", "Escrow is not funded"
 
-        prompt = (
-            f"Task Description: {self.job_description}\n"
-            f"Submitted Work: {submitted_work}\n"
-            "Analyze if the submitted work fully satisfies the task requirements. "
-            "Respond ONLY with 'APPROVED' or 'REJECTED'."
-        )
+        task_desc = self.job_description
 
-        # Menggunakan prompt_comparative hanya dengan argumen prompt
-        result = gl.eq_principle.prompt_comparative(prompt)
+        # AI Consensus Call (Callable lambda + principle)
+        result = gl.eq_principle.prompt_comparative(
+            lambda: f"Task Description: {task_desc}\nSubmitted Work: {submitted_work}\nAnalyze if the submitted work satisfies the task requirements. Respond ONLY with 'APPROVED' or 'REJECTED'.",
+            "The output must evaluate if the submission matches the task description."
+        )
 
         if "APPROVED" in str(result).upper():
             self.status = "COMPLETED"
-            payout_amount = self.amount
+            # Update settlement state
             self.amount = u256(0)
-            
-            # Transfer dana escrow ke freelancer
-            gl.transfer(self.freelancer, payout_amount)
-            return "APPROVED: Work accepted and payment transferred."
+            return "APPROVED: Work accepted and escrow settled."
         else:
             self.status = "DISPUTED"
             return "REJECTED: Work did not meet requirements."
@@ -59,9 +54,5 @@ class AIFreelanceEscrow(gl.Contract):
         assert gl.message.sender_address == self.client, "Only client can trigger refund"
         assert self.status == "DISPUTED", "No dispute to refund"
 
-        refund_amount = self.amount
         self.amount = u256(0)
         self.status = "REFUNDED"
-
-        # Kembalikan dana ke client
-        gl.transfer(self.client, refund_amount)
