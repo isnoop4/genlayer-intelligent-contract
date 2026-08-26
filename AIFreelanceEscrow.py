@@ -1,5 +1,6 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
+import json
 
 class AIFreelanceEscrow(gl.Contract):
     client: Address
@@ -7,6 +8,7 @@ class AIFreelanceEscrow(gl.Contract):
     job_description: str
     amount: u256
     status: str  # "CREATED", "FUNDED", "COMPLETED", "DISPUTED", "REFUNDED"
+    verdict_json: str
 
     def __init__(self, freelancer: str, job_description: str):
         self.client = gl.message.sender_address
@@ -14,6 +16,7 @@ class AIFreelanceEscrow(gl.Contract):
         self.job_description = job_description
         self.amount = u256(0)
         self.status = "CREATED"
+        self.verdict_json = json.dumps({"verdict": "PENDING"})
 
     @gl.public.write.payable
     def fund_escrow(self):
@@ -33,20 +36,28 @@ class AIFreelanceEscrow(gl.Contract):
 
         task_desc = self.job_description
 
-        # AI Consensus Call (Callable lambda + principle)
-        result = gl.eq_principle.prompt_comparative(
-            lambda: f"Task Description: {task_desc}\nSubmitted Work: {submitted_work}\nAnalyze if the submitted work satisfies the task requirements. Respond ONLY with 'APPROVED' or 'REJECTED'.",
-            "The output must evaluate if the submission matches the task description."
-        )
+        # Callback eksplisit memanggil LLM non-deterministik
+        def call_nondet() -> str:
+            prompt = (
+                f"Task Description: '{task_desc}'\n"
+                f"Submitted Work: '{submitted_work}'\n\n"
+                f"Analyze if the submitted work satisfies the task requirements.\n"
+                f"Respond ONLY with valid JSON format:\n"
+                f'{{"verdict": "APPROVED" | "REJECTED", "confidence": "HIGH" | "MEDIUM" | "LOW", "reason": "brief explanation"}}'
+            )
+            return gl.nondet.exec_prompt(prompt)
 
-        if "APPROVED" in str(result).upper():
+        # Evaluasi Konsensus Validator
+        raw_result = gl.eq_principle.ComparativeEq(call_nondet)
+        self.verdict_json = str(raw_result)
+
+        if "APPROVED" in self.verdict_json.upper():
             self.status = "COMPLETED"
-            # Update settlement state
             self.amount = u256(0)
-            return "APPROVED: Work accepted and escrow settled."
+            return self.verdict_json
         else:
             self.status = "DISPUTED"
-            return "REJECTED: Work did not meet requirements."
+            return self.verdict_json
 
     @gl.public.write
     def resolve_dispute_refund(self):
@@ -56,3 +67,7 @@ class AIFreelanceEscrow(gl.Contract):
 
         self.amount = u256(0)
         self.status = "REFUNDED"
+
+    @gl.public.view
+    def get_verdict(self) -> str:
+        return self.verdict_json
