@@ -21,14 +21,24 @@ An Intelligent Contract-powered freelance escrow system built on GenLayer. It us
 
 ---
 
-## How It Works
-
-1. **Initialization**: Client creates escrow defining `freelancer` address and `job_description`.
-2. **Funding**: Client deposits collateral via `fund_escrow()`.
-3. **Submission & Consensus**: Freelancer calls `submit_work_and_claim(submitted_work)`.
-   * Contract executes non-deterministic callback: `gl.nondet.exec_prompt(...)`.
-   * Consensus reached using `gl.eq_principle.ComparativeEq`.
-4. **Resolution**: If verdict is `APPROVED`, status shifts to `COMPLETED` and escrow settles. If `REJECTED`, contract flags as `DISPUTED` allowing client refund via `resolve_dispute_refund()`.
+##How It Works
+Deploy — Client deploys the contract with the freelancer's
+address and a plain-language job description.
+Fund — Client calls fund_escrow and deposits GEN into the
+escrow (CREATED → FUNDED).
+Submit — Freelancer calls submit_work_and_claim with their
+submitted work. This triggers the leader/validator consensus
+flow: an LLM evaluates the work against the task description and
+returns a structured verdict (APPROVED / REJECTED), which
+validators independently re-check before it's accepted.
+Settle
+If APPROVED → status becomes COMPLETED, and payment is
+transferred to the freelancer automatically.
+If REJECTED → status becomes DISPUTED, and the client can
+call resolve_dispute_refund to reclaim the deposited funds
+(DISPUTED → REFUNDED).
+Cancel — If the client wants to back out before funding, they
+can call cancel_escrow (CREATED → CANCELLED).
 
 ---
 
