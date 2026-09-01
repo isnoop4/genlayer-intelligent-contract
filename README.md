@@ -21,7 +21,8 @@ An Intelligent Contract-powered freelance escrow system built on GenLayer. It us
 
 ---
 
-##How It Works
+## Howw It Works
+
 Deploy — Client deploys the contract with the freelancer's
 address and a plain-language job description.
 Fund — Client calls fund_escrow and deposits GEN into the
