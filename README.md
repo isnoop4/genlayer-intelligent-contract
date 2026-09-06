@@ -7,8 +7,8 @@ An Intelligent Contract-powered freelance escrow system built on GenLayer. It us
 ## Contract Details
 
 * **Network**: GenLayer Studionet / Testnet Bradbury
-* **Contract Address** : `0x72B04b56465548638d06d7A903a101E0895275BE
-* **Explorer**: [View on GenLayer Explorer](https://explorer-studio.genlayer.com/address/0x72B04b56465548638d06d7A903a101E0895275BE)
+* **Contract Address** : `0x86c12ba599571bC70FF8Aa18fE6eCE996b423D26
+* **Explorer**: [View on GenLayer Explorer](https://explorer-studio.genlayer.com/address/0x86c12ba599571bC70FF8Aa18fE6eCE996b423D26) 
 
 ---
 
